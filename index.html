@@ -180,7 +180,7 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 /* ---------- Bingo-Board ---------- */
 .board{display:grid;gap:6px}
 .kachel{
-  position:relative;aspect-ratio:1;border:2px solid var(--linie);border-radius:8px;
+  position:relative;aspect-ratio:1;min-width:0;overflow:hidden;border:2px solid var(--linie);border-radius:8px;
   background:var(--fahrbahn-hell);display:flex;align-items:center;justify-content:center;
   text-align:center;padding:4px;
   font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;
@@ -188,6 +188,7 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
   transition:border-color .15s,background .15s;
   user-select:none;
 }
+.kachel .wort{display:block;max-width:100%;overflow-wrap:break-word;hyphens:auto}
 .kachel.offen:hover{border-color:var(--gelb);background:#39424F;cursor:pointer}
 .kachel.gewaehlt{border-color:var(--gelb);box-shadow:0 0 0 2px rgba(247,201,72,.35)}
 .kachel.wartet{border-style:dashed;border-color:var(--gelb)}
@@ -237,6 +238,8 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 .telekarte{flex:1;border-radius:8px;overflow:hidden;min-height:0}
 .votepano{flex:1;border-radius:8px;overflow:hidden;min-height:0;background:#11151B}
 .voteleiste{display:flex;gap:10px;justify-content:center}
+.fundnav{display:flex;align-items:center;justify-content:center;gap:14px}
+.fundnav .hinweis{font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
 
 .overlay{position:fixed;inset:0;background:rgba(10,13,18,.88);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
 .ovbox{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
@@ -425,6 +428,7 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
       <p id="endeGrund" class="hinweis" style="margin-top:6px"></p>
       <div id="endeListe" class="endeliste"></div>
       <div class="lobbyfuss">
+        <button id="btnReview" class="btn versteckt">🔍 Alle Funde durchgehen</button>
         <button id="btnNochmal" class="btn primaer versteckt">Neue Runde</button>
         <button id="btnZurLobby" class="btn versteckt">Zur Lobby</button>
         <p id="endeWarten" class="hinweis versteckt">Warten auf den Host …</p>
@@ -446,6 +450,11 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
   <div class="modalbox gross">
     <div class="modalkopf"><h3 id="voteTitel">Fund ansehen</h3><button class="schliessen" data-schliesst="mVote">✕</button></div>
     <div id="votePano" class="votepano"></div>
+    <div id="fundNav" class="fundnav versteckt">
+      <button id="btnFundZurueck" class="btn klein">← Zurück</button>
+      <span id="fundZaehler" class="hinweis"></span>
+      <button id="btnFundWeiter" class="btn klein">Weiter →</button>
+    </div>
     <div id="voteLeiste" class="voteleiste versteckt">
       <button id="btnVoteJa" class="btn ok">✔ Zählt</button>
       <button id="btnVoteNein" class="btn gefahr">✘ Zählt nicht</button>
@@ -609,6 +618,7 @@ let joinTimeout = null;
 let mapsPromise = null, pano = null, svService = null;
 let teleMap = null, teleMarker = null, votePanoObj = null;
 let gewaehltesWort = null, aktuellFundId = null;
+let reviewListe = [], reviewIndex = -1;
 
 /* ===================== Google Maps ===================== */
 function apiKey(){
@@ -1050,7 +1060,7 @@ async function raumBeitreten(){
   });
   joinTimeout = setTimeout(() => {
     if(!S){
-      setzeStartFehler("Keine Antwort vom Raum – Code checken oder Host fragen.");
+      setzeStartFehler("Keine Antwort vom Raum. Code checken – und: VPN oder Werbeblocker (z. B. das eingebaute Opera-VPN) blockieren oft die Verbindung. Dort abschalten oder Chrome/Edge/Firefox nehmen.");
       sperrStart(false);
       try{ peer.destroy(); }catch(e){}
       peer = null; hostConn = null;
@@ -1151,7 +1161,7 @@ function renderSpiel(){
   /* --- Board --- */
   const b = $("board");
   const n = S.settings.groesse;
-  b.style.gridTemplateColumns = "repeat(" + n + ",1fr)";
+  b.style.gridTemplateColumns = "repeat(" + n + ",minmax(0,1fr))";
   b.innerHTML = "";
   const ich = S.players[my.id] || { done: {}, pending: {}, farbe: "#888" };
   if(gewaehltesWort && (ich.done[gewaehltesWort] || ich.pending[gewaehltesWort])){
@@ -1164,6 +1174,7 @@ function renderSpiel(){
     k.className = "kachel";
     if(n === 5) k.style.fontSize = ".72rem";
     const sp = document.createElement("span");
+    sp.className = "wort";
     sp.textContent = wort;
     k.appendChild(sp);
     if(ich.done[wort]){
@@ -1322,11 +1333,20 @@ async function betreteSpiel(){
 }
 
 /* ---------- Fund ansehen / abstimmen ---------- */
-async function zeigeFund(capId){
+async function zeigeFund(capId, review){
   if(!S || !S.captures[capId]) return;
   const cap = S.captures[capId];
   aktuellFundId = capId;
-  $("voteTitel").textContent = nameVon(cap.player) + ": „" + cap.wort + "“";
+  const status = cap.status === "ok" ? " ✔" : cap.status === "nein" ? " ✘" : "";
+  $("voteTitel").textContent = nameVon(cap.player) + ": „" + cap.wort + "“" + status;
+  $("fundNav").classList.toggle("versteckt", !review);
+  if(review){
+    $("fundZaehler").textContent = (reviewIndex + 1) + " / " + reviewListe.length;
+    $("btnFundZurueck").disabled = reviewIndex <= 0;
+    $("btnFundWeiter").disabled = reviewIndex >= reviewListe.length - 1;
+  }else{
+    reviewIndex = -1;
+  }
   oeffneModal("mVote");
   try{ await ensureMaps(); }catch(e){ return; }
   if(!votePanoObj){
@@ -1349,7 +1369,7 @@ async function zeigeFund(capId){
   votePanoObj.setPano(cap.panoId);
   votePanoObj.setPov({ heading: cap.pov.heading, pitch: cap.pov.pitch });
   votePanoObj.setZoom(cap.zoom || 1);
-  const darf = cap.status === "pending" && cap.player !== my.id && cap.votes[my.id] === undefined && S.phase === "playing";
+  const darf = !review && cap.status === "pending" && cap.player !== my.id && cap.votes[my.id] === undefined && S.phase === "playing";
   $("voteLeiste").classList.toggle("versteckt", !darf);
 }
 
@@ -1357,6 +1377,20 @@ function stimmeAb(ok){
   if(!aktuellFundId) return;
   aktion({ t: "vote", capId: aktuellFundId, ok });
   schliesseModal("mVote");
+}
+
+function starteReview(){
+  if(!S) return;
+  reviewListe = [];
+  for(const e of rangliste()){
+    Object.values(S.captures)
+      .filter(c => c.player === e.id && c.status === "ok")
+      .sort((a, b) => a.at - b.at)
+      .forEach(c => reviewListe.push(c.id));
+  }
+  if(!reviewListe.length){ toast("Keine gewerteten Funde zum Durchgehen da."); return; }
+  reviewIndex = 0;
+  zeigeFund(reviewListe[0], true);
 }
 
 /* ---------- Weltkarte / Teleport ---------- */
@@ -1452,6 +1486,7 @@ function renderEnde(){
   $("btnNochmal").classList.toggle("versteckt", !isHost);
   $("btnZurLobby").classList.toggle("versteckt", !isHost);
   $("endeWarten").classList.toggle("versteckt", isHost);
+  $("btnReview").classList.toggle("versteckt", !Object.values(S.captures).some(c => c.status === "ok"));
 }
 
 /* ---------- Konfetti ---------- */
@@ -1560,6 +1595,21 @@ function init(){
 
   $("btnVoteJa").addEventListener("click", () => stimmeAb(true));
   $("btnVoteNein").addEventListener("click", () => stimmeAb(false));
+
+  $("btnReview").addEventListener("click", starteReview);
+  $("btnFundZurueck").addEventListener("click", () => {
+    if(reviewIndex > 0){ reviewIndex--; zeigeFund(reviewListe[reviewIndex], true); }
+  });
+  $("btnFundWeiter").addEventListener("click", () => {
+    if(reviewIndex < reviewListe.length - 1){ reviewIndex++; zeigeFund(reviewListe[reviewIndex], true); }
+  });
+  document.addEventListener("keydown", e => {
+    if($("mVote").classList.contains("versteckt")) return;
+    if(e.key === "Escape"){ schliesseModal("mVote"); return; }
+    if(reviewIndex < 0) return;
+    if(e.key === "ArrowLeft") $("btnFundZurueck").click();
+    if(e.key === "ArrowRight") $("btnFundWeiter").click();
+  });
 
   document.querySelectorAll(".schliessen").forEach(b => {
     b.addEventListener("click", () => schliesseModal(b.dataset.schliesst));
