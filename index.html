@@ -193,6 +193,8 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 .kachel.gewaehlt{border-color:var(--gelb);box-shadow:0 0 0 2px rgba(247,201,72,.35)}
 .kachel.wartet{border-style:dashed;border-color:var(--gelb)}
 .kachel.wartet::after{content:"⏳";position:absolute;top:3px;right:5px;font-size:.8rem}
+.kachel.gesperrt{cursor:not-allowed}
+.kachel.gesperrt::after{content:"🔒";position:absolute;top:3px;right:5px;font-size:.75rem}
 .kachel.meins{color:#0F1409}
 .kachel.meins::after{content:"✔";position:absolute;top:2px;right:5px;font-weight:700}
 .kachel .dots{position:absolute;bottom:3px;left:0;right:0;display:flex;justify-content:center;gap:3px}
@@ -364,8 +366,18 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
             <option value="0">ohne Limit</option>
           </select>
         </label>
+        <label>Wörter
+          <select id="selListe">
+            <option value="klassisch" selected>Klassisch</option>
+            <option value="brainrot">Brainrot</option>
+            <option value="mix">Gemischt</option>
+          </select>
+        </label>
         <label class="schalter">Abstimmung über Funde
           <input type="checkbox" id="chkVoting" checked><span class="knubbel"></span>
+        </label>
+        <label class="schalter">Lockout-Modus
+          <input type="checkbox" id="chkLockout"><span class="knubbel"></span>
         </label>
       </div>
 
@@ -498,7 +510,8 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyBIwkbfIjuGJP7IRlb3G2Q6BIozc-DE2iM";   // <<< 
 const PEER_PREFIX = "strassenbingo-";
 const VOTE_FRIST_MS = 45000;
 
-const WORTLISTE = [
+const WORTLISTEN = {
+  klassisch: [
   "Kirche","Brücke","Statue","Denkmal","Graffiti","Spielplatz","Ampel","Zebrastreifen",
   "Kreisverkehr","Tunnel","Boot","Hafen","Leuchtturm","Fluss","See","Strand","Palme",
   "Berge","Wald","Acker","Traktor","Windrad","Bauernhof","Kuh","Pferd","Schaf","Hund",
@@ -512,7 +525,23 @@ const WORTLISTE = [
   "Sitzbank","Laterne","Zaun","Gewächshaus","Weinberg","Windmühle","Burg","Rathaus",
   "Museum","Kino","Marktplatz","Parkhaus","Ladesäule","Fachwerkhaus","Kreuzung",
   "Fußgängerzone","Wohnwagen","Sporthalle"
-];
+  ],
+  brainrot: [
+  "1 HP Opa","67","Anime Girl","NPC","Main Character","Handy-Zombie","Speedrunner",
+  "Rentner-Gang","Kampfradler","Rizzler","Slay Outfit","Jorts","Socken in Sandalen",
+  "Vokuhila","Crocs","Gymbro","Hund mit Aura","Katze mit Rizz","Kampftaube",
+  "Sigma-Karre","Bratan-Benz","Boomer-Karre","Rostlaube","Goofy Auto","FBI-Van",
+  "L-Parkjob","Blitzer","Blaulicht-Party","Umgekippter E-Scooter","Skibidi-Klo",
+  "Minecraft-Haus","Backrooms-Eingang","Liminal Space","Lost Place","Ohio-Ecke",
+  "Cursed Haus","Haus mit 1 HP","Baum mit 1 HP","Gigachad-Statue","Ehrenmann-Denkmal",
+  "Brainrot-Graffiti","Amogus","Scheich-Villa","Dubai-Turm","Endboss-Turm",
+  "Messie-Balkon","Monstera im Fenster","Gartenzwerg","Deko-Flamingo","Mähroboter",
+  "5G-Turm","W Döner","Vape-Shop","Shisha-Bar","Barbershop","Drip-Laden",
+  "Gacha-Automat","Energy-Dose","Sperrmüll-Loot","Flex-Pool","Bierkasten",
+  "Insta-Spot","Parkour-Spot","Hüpfburg","Tuk-Tuk","Verpixeltes Gesicht",
+  "Schatten vom Google-Auto","Kamera-Winker"
+  ]
+};
 
 const SPAWNS = [
   {name:"Köln", lat:50.9375, lng:6.9603},
@@ -731,7 +760,7 @@ function frischerZustand(code){
     phase: "lobby",
     code,
     hostId: my.id,
-    settings: { groesse: 4, minuten: 15, voting: true },
+    settings: { groesse: 4, minuten: 15, voting: true, lockout: false, liste: "klassisch" },
     players: {},
     order: [],
     board: [],
@@ -766,6 +795,10 @@ function addPlayer(id, name){
 
 function andereVerbundene(ausser){
   return S.order.filter(id => id !== ausser && S.players[id].connected);
+}
+
+function wortVergeben(wort){
+  return S.order.some(id => S.players[id].done[wort] || S.players[id].pending[wort]);
 }
 
 function akzeptiere(cap){
@@ -863,7 +896,9 @@ function beendeRunde(grund){
 
 function startRunde(){
   const n = S.settings.groesse;
-  S.board = mischen(WORTLISTE).slice(0, n * n);
+  let pool = WORTLISTEN[S.settings.liste] || WORTLISTEN.klassisch;
+  if(S.settings.liste === "mix") pool = WORTLISTEN.klassisch.concat(WORTLISTEN.brainrot);
+  S.board = mischen(pool).slice(0, n * n);
   S.captures = {};
   for(const id of S.order){
     const p = S.players[id];
@@ -889,6 +924,7 @@ function amHost(von, m){
       if(!p || S.phase !== "playing") break;
       const wort = m.wort;
       if(!S.board.includes(wort) || p.done[wort] || p.pending[wort]) break;
+      if(S.settings.lockout && wortVergeben(wort)) break;
       const id = neueId();
       const cap = {
         id, player: von, wort,
@@ -948,6 +984,10 @@ function tickHost(){
       if(ja >= nein) akzeptiere(c); else ablehnen(c);
       dirty = true;
     }
+  }
+  if(S.settings.lockout && S.board.length && S.board.every(w => S.order.some(id => S.players[id].done[w]))){
+    beendeRunde("voll");
+    return;
   }
   if(S.phase === "playing" && S.endsAt && jetzt >= S.endsAt){
     beendeRunde("zeit");
@@ -1146,11 +1186,13 @@ function renderLobby(){
   }
   $("btnStart").classList.toggle("versteckt", !isHost);
   $("lobbyWarten").classList.toggle("versteckt", isHost);
-  ["selGroesse", "selZeit", "chkVoting"].forEach(x => { $(x).disabled = !isHost; });
+  ["selGroesse", "selZeit", "selListe", "chkVoting", "chkLockout"].forEach(x => { $(x).disabled = !isHost; });
   if(!isHost){
     $("selGroesse").value = String(S.settings.groesse);
     $("selZeit").value = String(S.settings.minuten);
+    $("selListe").value = S.settings.liste || "klassisch";
     $("chkVoting").checked = !!S.settings.voting;
+    $("chkLockout").checked = !!S.settings.lockout;
   }
 }
 
@@ -1164,7 +1206,7 @@ function renderSpiel(){
   b.style.gridTemplateColumns = "repeat(" + n + ",minmax(0,1fr))";
   b.innerHTML = "";
   const ich = S.players[my.id] || { done: {}, pending: {}, farbe: "#888" };
-  if(gewaehltesWort && (ich.done[gewaehltesWort] || ich.pending[gewaehltesWort])){
+  if(gewaehltesWort && (ich.done[gewaehltesWort] || ich.pending[gewaehltesWort] || (S.settings.lockout && wortVergeben(gewaehltesWort)))){
     gewaehltesWort = null;
     $("fangleiste").classList.add("versteckt");
   }
@@ -1177,28 +1219,45 @@ function renderSpiel(){
     sp.className = "wort";
     sp.textContent = wort;
     k.appendChild(sp);
+    let sperrer = null, reserviert = null;
+    if(S.settings.lockout){
+      for(const id of S.order){
+        if(id === my.id) continue;
+        if(S.players[id].done[wort]) sperrer = S.players[id];
+        else if(S.players[id].pending[wort]) reserviert = S.players[id];
+      }
+    }
     if(ich.done[wort]){
       k.classList.add("meins");
       k.style.background = ich.farbe;
       k.style.borderColor = ich.farbe;
     }else if(ich.pending[wort]){
       k.classList.add("wartet");
+    }else if(sperrer){
+      k.classList.add("gesperrt");
+      k.style.borderColor = sperrer.farbe;
+      k.style.background = sperrer.farbe + "2E";
+    }else if(reserviert){
+      k.classList.add("wartet");
+      k.style.borderColor = reserviert.farbe;
     }else{
       k.classList.add("offen");
       if(wort === gewaehltesWort) k.classList.add("gewaehlt");
       k.addEventListener("click", () => waehleWort(wort));
     }
-    const dots = document.createElement("span");
-    dots.className = "dots";
-    for(const id of S.order){
-      if(id === my.id) continue;
-      if(S.players[id].done[wort]){
-        const i = document.createElement("i");
-        i.style.background = S.players[id].farbe;
-        dots.appendChild(i);
+    if(!S.settings.lockout){
+      const dots = document.createElement("span");
+      dots.className = "dots";
+      for(const id of S.order){
+        if(id === my.id) continue;
+        if(S.players[id].done[wort]){
+          const i = document.createElement("i");
+          i.style.background = S.players[id].farbe;
+          dots.appendChild(i);
+        }
       }
+      if(dots.children.length) k.appendChild(dots);
     }
-    if(dots.children.length) k.appendChild(dots);
     b.appendChild(k);
   }
 
@@ -1456,6 +1515,7 @@ function renderEnde(){
   const gruende = {
     bingo: "BINGO! Eine komplette Reihe voll.",
     zeit: "Zeit abgelaufen – die meisten Funde gewinnen.",
+    voll: "Alle Felder vergeben – die meisten Funde gewinnen.",
     abbruch: "Der Host hat die Runde beendet – aktueller Stand zählt."
   };
   $("endeGrund").textContent = gruende[S.winReason] || "";
@@ -1568,6 +1628,12 @@ function init(){
   });
   $("chkVoting").addEventListener("change", () => {
     if(isHost && S){ S.settings.voting = $("chkVoting").checked; broadcast(); }
+  });
+  $("selListe").addEventListener("change", () => {
+    if(isHost && S){ S.settings.liste = $("selListe").value; broadcast(); }
+  });
+  $("chkLockout").addEventListener("change", () => {
+    if(isHost && S){ S.settings.lockout = $("chkLockout").checked; broadcast(); }
   });
   $("btnStart").addEventListener("click", () => { if(isHost && S && S.phase === "lobby") startRunde(); });
 
