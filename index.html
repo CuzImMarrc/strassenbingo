@@ -206,6 +206,15 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 }
 .fangleiste > div{display:flex;gap:8px}
 
+.racepanel{display:flex;flex-direction:column;gap:8px;background:var(--asphalt);border:1px solid var(--linie);border-radius:var(--radius);padding:12px;margin-bottom:6px}
+.racelabel{font-family:'Barlow Condensed',sans-serif;font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)}
+.racewort{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.7rem;line-height:1.1;text-transform:uppercase;color:var(--gelb);overflow-wrap:break-word}
+.racestand{display:flex;flex-direction:column;gap:4px;font-weight:600}
+.teamgruppe{flex:1 1 100%}
+.teamgruppe h4{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.chip.klickbar{cursor:pointer}
+.chip.klickbar:hover{border-color:var(--gelb)}
+
 /* ---------- Spieler / Feed / Chat ---------- */
 .spielerliste{display:flex;flex-direction:column;gap:6px}
 .sprow{display:flex;align-items:center;gap:8px;font-weight:600}
@@ -346,14 +355,28 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 
       <h3 class="abschnitt">Spieler</h3>
       <div id="lobbySpieler" class="chips"></div>
+      <p id="teamHinweis" class="hinweis versteckt" style="margin-top:6px">Klick auf deinen Namen, um das Team zu wechseln.</p>
 
       <h3 class="abschnitt">Einstellungen</h3>
       <div class="einstellungen">
-        <label>Feld
+        <label>Modus
+          <select id="selModus">
+            <option value="bingo" selected>Bingo</option>
+            <option value="race">Race</option>
+          </select>
+        </label>
+        <label id="lblGroesse">Feld
           <select id="selGroesse">
             <option value="3">3 × 3</option>
             <option value="4" selected>4 × 4</option>
             <option value="5">5 × 5</option>
+          </select>
+        </label>
+        <label id="lblPunkte" class="versteckt">Punkteziel
+          <select id="selPunkte">
+            <option value="5">5 Punkte</option>
+            <option value="10" selected>10 Punkte</option>
+            <option value="15">15 Punkte</option>
           </select>
         </label>
         <label>Zeit
@@ -373,10 +396,13 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
             <option value="mix">Gemischt</option>
           </select>
         </label>
+        <label class="schalter">Teams
+          <input type="checkbox" id="chkTeams"><span class="knubbel"></span>
+        </label>
         <label class="schalter">Abstimmung über Funde
           <input type="checkbox" id="chkVoting" checked><span class="knubbel"></span>
         </label>
-        <label class="schalter">Lockout-Modus
+        <label id="lblLockout" class="schalter">Lockout-Modus
           <input type="checkbox" id="chkLockout"><span class="knubbel"></span>
         </label>
       </div>
@@ -407,6 +433,13 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
   </header>
   <div class="spielflaeche">
     <aside id="seite" class="seite">
+      <div id="racePanel" class="racepanel versteckt">
+        <div class="racelabel">Aktuelles Wort</div>
+        <div id="raceWort" class="racewort">–</div>
+        <button id="btnRaceFangen" class="btn primaer">📸 Gefunden!</button>
+        <button id="btnRaceSkip" class="btn klein versteckt">Wort überspringen</button>
+        <div id="raceStand" class="racestand"></div>
+      </div>
       <div id="board" class="board"></div>
       <div id="fangleiste" class="fangleiste versteckt">
         <span id="fangText"></span>
@@ -574,6 +607,8 @@ const SPAWNS = [
 ];
 
 const FARBEN = ["#F7C948","#4C9EEB","#EE6C4D","#8AC926","#C77DFF","#FF9F1C","#43BCCD","#F25CA2","#B5E48C","#F4989C"];
+const TEAMFARBEN = { a: "#F7C948", b: "#4C9EEB" };
+const TEAMNAMEN = { a: "Team Gelb", b: "Team Blau" };
 
 /* ===================== Helfer ===================== */
 const $ = id => document.getElementById(id);
@@ -760,10 +795,13 @@ function frischerZustand(code){
     phase: "lobby",
     code,
     hostId: my.id,
-    settings: { groesse: 4, minuten: 15, voting: true, lockout: false, liste: "klassisch" },
+    settings: { groesse: 4, minuten: 15, voting: true, lockout: false, liste: "klassisch", modus: "bingo", teams: false, punkteZiel: 10 },
     players: {},
     order: [],
     board: [],
+    racePool: [],
+    raceBenutzt: [],
+    raceWort: null,
     spawn: null,
     startAt: 0,
     endsAt: 0,
@@ -781,11 +819,32 @@ function saubererName(n){
 
 function addPlayer(id, name){
   if(!S.players[id]){
+    // Rejoin: getrennter Spieler mit gleichem Namen? Dann Fortschritt übernehmen.
+    const altId = S.order.find(x => !S.players[x].connected && S.players[x].name.toLowerCase() === String(name).toLowerCase());
+    if(altId){
+      const p = S.players[altId];
+      delete S.players[altId];
+      S.players[id] = p;
+      p.connected = true;
+      S.order[S.order.indexOf(altId)] = id;
+      for(const cid in S.captures){
+        const c = S.captures[cid];
+        if(c.player === altId) c.player = id;
+        if(c.votes && altId in c.votes){ c.votes[id] = c.votes[altId]; delete c.votes[altId]; }
+      }
+      if(Array.isArray(S.winner)) S.winner = S.winner.map(x => (x === altId ? id : x));
+      broadcast();
+      return;
+    }
     S.players[id] = {
       name, farbe: FARBEN[S.order.length % FARBEN.length],
-      connected: true, done: {}, pending: {}, lastDoneAt: 0
+      connected: true, done: {}, pending: {}, lastDoneAt: 0, punkte: 0, team: null
     };
     S.order.push(id);
+    if(S.settings.teams){
+      const a = teamMitglieder("a").length, b = teamMitglieder("b").length;
+      S.players[id].team = a <= b ? "a" : "b";
+    }
   }else{
     S.players[id].connected = true;
     if(name) S.players[id].name = name;
@@ -801,6 +860,57 @@ function wortVergeben(wort){
   return S.order.some(id => S.players[id].done[wort] || S.players[id].pending[wort]);
 }
 
+function teamVon(id){ return (S.players[id] || {}).team || null; }
+
+function teamMitglieder(team){ return S.order.filter(id => S.players[id].team === team); }
+
+function spielerWert(id){
+  return S.settings.modus === "race" ? (S.players[id].punkte || 0) : Object.keys(S.players[id].done).length;
+}
+
+function teamGesamt(team){
+  return teamMitglieder(team).reduce((s, id) => s + spielerWert(id), 0);
+}
+
+function verteileTeams(){
+  for(const id of S.order){
+    const p = S.players[id];
+    if(p.team !== "a" && p.team !== "b"){
+      const a = teamMitglieder("a").length, b = teamMitglieder("b").length;
+      p.team = a <= b ? "a" : "b";
+    }
+  }
+}
+
+function wortStatusFuer(wort, spielerId){
+  const ids = S.settings.teams ? teamMitglieder(teamVon(spielerId)) : [spielerId];
+  return {
+    done: ids.some(id => S.players[id] && S.players[id].done[wort]),
+    pend: ids.some(id => S.players[id] && S.players[id].pending[wort])
+  };
+}
+
+function zieheRaceWort(){
+  let frei = S.racePool.filter(w => !S.raceBenutzt.includes(w));
+  if(!frei.length){ S.raceBenutzt = []; frei = S.racePool.slice(); }
+  const w = zufall(frei);
+  S.raceBenutzt.push(w);
+  return w;
+}
+
+function raceNachTreffer(cap){
+  if(S.phase !== "playing") return;
+  const p = S.players[cap.player];
+  const stand = S.settings.teams ? teamGesamt(p.team) : (p.punkte || 0);
+  if(stand >= S.settings.punkteZiel){
+    S.winner = S.settings.teams ? teamMitglieder(p.team) : [cap.player];
+    S.winReason = "ziel";
+    S.phase = "ended";
+    return;
+  }
+  S.raceWort = zieheRaceWort();
+}
+
 function akzeptiere(cap){
   cap.status = "ok";
   const p = S.players[cap.player];
@@ -808,7 +918,9 @@ function akzeptiere(cap){
   delete p.pending[cap.wort];
   p.done[cap.wort] = cap.id;
   p.lastDoneAt = Date.now();
-  pruefeBingo(cap.player);
+  p.punkte = (p.punkte || 0) + 1;
+  if(S.settings.modus === "race") raceNachTreffer(cap);
+  else pruefeBingo(cap.player);
 }
 
 function ablehnen(cap){
@@ -835,7 +947,9 @@ function pruefeAlleAbstimmungen(){
 function pruefeBingo(pid){
   const n = S.settings.groesse;
   const p = S.players[pid];
-  const hat = w => !!p.done[w];
+  const hat = S.settings.teams
+    ? (w => teamMitglieder(p.team).some(id => S.players[id].done[w]))
+    : (w => !!p.done[w]);
   const zelle = (r, c) => S.board[r * n + c];
   let bingo = false;
   for(let r = 0; r < n && !bingo; r++){
@@ -859,7 +973,7 @@ function pruefeBingo(pid){
     if(ok) bingo = true;
   }
   if(bingo){
-    S.winner = [pid];
+    S.winner = S.settings.teams ? teamMitglieder(p.team) : [pid];
     S.winReason = "bingo";
     S.phase = "ended";
   }
@@ -869,7 +983,7 @@ function rangliste(){
   return S.order.map(id => ({
     id,
     p: S.players[id],
-    n: Object.keys(S.players[id].done).length,
+    n: spielerWert(id),
     t: S.players[id].lastDoneAt || Infinity
   })).sort((a, b) => (b.n - a.n) || (a.t - b.t));
 }
@@ -888,7 +1002,12 @@ function beendeRunde(grund){
   if(S.phase === "ended"){ broadcast(); return; }   // Bingo durch letzte Wertung
   const liste = rangliste();
   const top = liste[0];
-  S.winner = top && top.n > 0 ? liste.filter(x => x.n === top.n && x.t === top.t).map(x => x.id) : [];
+  if(S.settings.teams){
+    const pa = teamGesamt("a"), pb = teamGesamt("b");
+    S.winner = pa === pb ? [] : teamMitglieder(pa > pb ? "a" : "b");
+  }else{
+    S.winner = top && top.n > 0 ? liste.filter(x => x.n === top.n && x.t === top.t).map(x => x.id) : [];
+  }
   S.winReason = grund;
   S.phase = "ended";
   broadcast();
@@ -898,11 +1017,20 @@ function startRunde(){
   const n = S.settings.groesse;
   let pool = WORTLISTEN[S.settings.liste] || WORTLISTEN.klassisch;
   if(S.settings.liste === "mix") pool = WORTLISTEN.klassisch.concat(WORTLISTEN.brainrot);
-  S.board = mischen(pool).slice(0, n * n);
+  if(S.settings.teams) verteileTeams();
   S.captures = {};
   for(const id of S.order){
     const p = S.players[id];
-    p.done = {}; p.pending = {}; p.lastDoneAt = 0;
+    p.done = {}; p.pending = {}; p.lastDoneAt = 0; p.punkte = 0;
+  }
+  if(S.settings.modus === "race"){
+    S.board = [];
+    S.racePool = pool.slice();
+    S.raceBenutzt = [];
+    S.raceWort = zieheRaceWort();
+  }else{
+    S.board = mischen(pool).slice(0, n * n);
+    S.racePool = []; S.raceBenutzt = []; S.raceWort = null;
   }
   S.spawn = zufall(SPAWNS);
   S.winner = null; S.winReason = "";
@@ -923,8 +1051,15 @@ function amHost(von, m){
       const p = S.players[von];
       if(!p || S.phase !== "playing") break;
       const wort = m.wort;
-      if(!S.board.includes(wort) || p.done[wort] || p.pending[wort]) break;
-      if(S.settings.lockout && wortVergeben(wort)) break;
+      if(S.settings.modus === "race"){
+        if(wort !== S.raceWort) break;
+        if(Object.values(S.captures).some(c => c.status === "pending")) break;
+      }else{
+        if(!S.board.includes(wort)) break;
+        const eigene = S.settings.teams ? teamMitglieder(p.team) : [von];
+        if(eigene.some(x => S.players[x].done[wort] || S.players[x].pending[wort])) break;
+        if(S.settings.lockout && wortVergeben(wort)) break;
+      }
       const id = neueId();
       const cap = {
         id, player: von, wort,
@@ -967,6 +1102,22 @@ function amHost(von, m){
       broadcast();
       break;
     }
+
+    case "team": {
+      const p = S.players[von];
+      if(!p || S.phase !== "lobby" || !S.settings.teams) break;
+      p.team = p.team === "a" ? "b" : "a";
+      broadcast();
+      break;
+    }
+
+    case "raceskip": {
+      if(von !== S.hostId || S.settings.modus !== "race" || S.phase !== "playing") break;
+      if(Object.values(S.captures).some(c => c.status === "pending")) break;
+      S.raceWort = zieheRaceWort();
+      broadcast();
+      break;
+    }
   }
 }
 
@@ -985,7 +1136,7 @@ function tickHost(){
       dirty = true;
     }
   }
-  if(S.settings.lockout && S.board.length && S.board.every(w => S.order.some(id => S.players[id].done[w]))){
+  if(S.settings.modus !== "race" && S.settings.lockout && S.board.length && S.board.every(w => S.order.some(id => S.players[id].done[w]))){
     beendeRunde("voll");
     return;
   }
@@ -1135,8 +1286,12 @@ function verarbeiteDiff(alt){
     if(!a){
       if(c.player !== my.id){
         if(c.status === "pending"){
-          toast(nameVon(c.player) + " hat „" + c.wort + "“ eingefangen – abstimmen!",
-            { label: "Ansehen", cb: () => zeigeFund(id) }, 10000);
+          if(S.settings.modus === "race" && S.phase === "playing"){
+            zeigeFund(id);
+          }else{
+            toast(nameVon(c.player) + " hat „" + c.wort + "“ eingefangen – abstimmen!",
+              { label: "Ansehen", cb: () => zeigeFund(id) }, 10000);
+          }
         }else if(c.status === "ok"){
           toast(nameVon(c.player) + ": „" + c.wort + "“ ✔");
         }
@@ -1148,6 +1303,9 @@ function verarbeiteDiff(alt){
         toast("„" + c.wort + "“ von " + nameVon(c.player) + " zählt ✔");
       }
     }
+  }
+  if(S.settings.modus === "race" && S.phase === "playing" && alt.raceWort && S.raceWort && alt.raceWort !== S.raceWort){
+    toast("🔎 Neues Wort: " + S.raceWort);
   }
 }
 
@@ -1171,10 +1329,11 @@ function renderAll(){
 function renderLobby(){
   const wrap = $("lobbySpieler");
   wrap.innerHTML = "";
-  for(const id of S.order){
+  const teams = S.settings.teams;
+  const chipFuer = id => {
     const p = S.players[id];
     const chip = document.createElement("span");
-    chip.className = "chip" + (p.connected ? "" : " weg");
+    chip.className = "chip" + (p.connected ? "" : " weg") + (teams && id === my.id ? " klickbar" : "");
     const punkt = document.createElement("span");
     punkt.className = "punkt";
     punkt.style.background = p.farbe;
@@ -1182,17 +1341,49 @@ function renderLobby(){
     const nm = document.createElement("span");
     nm.textContent = p.name + (id === S.hostId ? " 👑" : "") + (id === my.id ? " (du)" : "");
     chip.appendChild(nm);
-    wrap.appendChild(chip);
+    if(teams && id === my.id){
+      chip.title = "Team wechseln";
+      chip.addEventListener("click", () => aktion({ t: "team" }));
+    }
+    return chip;
+  };
+  if(teams){
+    for(const t of ["a", "b"]){
+      const g = document.createElement("div");
+      g.className = "teamgruppe";
+      const h = document.createElement("h4");
+      h.textContent = TEAMNAMEN[t];
+      h.style.color = TEAMFARBEN[t];
+      g.appendChild(h);
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      for(const id of S.order){
+        const pt = S.players[id].team === "b" ? "b" : "a";
+        if(pt === t) chips.appendChild(chipFuer(id));
+      }
+      g.appendChild(chips);
+      wrap.appendChild(g);
+    }
+  }else{
+    for(const id of S.order) wrap.appendChild(chipFuer(id));
   }
+  $("teamHinweis").classList.toggle("versteckt", !teams);
   $("btnStart").classList.toggle("versteckt", !isHost);
   $("lobbyWarten").classList.toggle("versteckt", isHost);
-  ["selGroesse", "selZeit", "selListe", "chkVoting", "chkLockout"].forEach(x => { $(x).disabled = !isHost; });
+  const race = S.settings.modus === "race";
+  $("lblGroesse").classList.toggle("versteckt", race);
+  $("lblLockout").classList.toggle("versteckt", race);
+  $("lblPunkte").classList.toggle("versteckt", !race);
+  ["selGroesse", "selZeit", "selListe", "selModus", "selPunkte", "chkVoting", "chkLockout", "chkTeams"].forEach(x => { $(x).disabled = !isHost; });
   if(!isHost){
     $("selGroesse").value = String(S.settings.groesse);
     $("selZeit").value = String(S.settings.minuten);
     $("selListe").value = S.settings.liste || "klassisch";
+    $("selModus").value = S.settings.modus || "bingo";
+    $("selPunkte").value = String(S.settings.punkteZiel || 10);
     $("chkVoting").checked = !!S.settings.voting;
     $("chkLockout").checked = !!S.settings.lockout;
+    $("chkTeams").checked = !!S.settings.teams;
   }
 }
 
@@ -1200,13 +1391,38 @@ function renderSpiel(){
   if(!S) return;
   $("btnBeenden").classList.toggle("versteckt", !isHost);
 
+  const race = S.settings.modus === "race";
+  const teams = S.settings.teams;
+  $("racePanel").classList.toggle("versteckt", !race);
+  $("board").classList.toggle("versteckt", race);
+  if(race){
+    gewaehltesWort = null;
+    $("fangleiste").classList.add("versteckt");
+    $("raceWort").textContent = S.raceWort || "–";
+    $("btnRaceSkip").classList.toggle("versteckt", !isHost);
+    const inPruefung = Object.values(S.captures).some(c => c.status === "pending");
+    $("btnRaceFangen").disabled = inPruefung;
+    $("btnRaceFangen").textContent = inPruefung ? "⏳ Wird geprüft …" : "📸 Gefunden!";
+    const rs = $("raceStand");
+    rs.innerHTML = "";
+    if(teams){
+      for(const t of ["a", "b"]){
+        const row = document.createElement("div");
+        row.style.color = TEAMFARBEN[t];
+        row.textContent = TEAMNAMEN[t] + ": " + teamGesamt(t) + " / " + S.settings.punkteZiel;
+        rs.appendChild(row);
+      }
+    }
+  }
+
   /* --- Board --- */
   const b = $("board");
   const n = S.settings.groesse;
   b.style.gridTemplateColumns = "repeat(" + n + ",minmax(0,1fr))";
   b.innerHTML = "";
   const ich = S.players[my.id] || { done: {}, pending: {}, farbe: "#888" };
-  if(gewaehltesWort && (ich.done[gewaehltesWort] || ich.pending[gewaehltesWort] || (S.settings.lockout && wortVergeben(gewaehltesWort)))){
+  const gsel = gewaehltesWort ? wortStatusFuer(gewaehltesWort, my.id) : null;
+  if(gewaehltesWort && (gsel.done || gsel.pend || (S.settings.lockout && wortVergeben(gewaehltesWort)))){
     gewaehltesWort = null;
     $("fangleiste").classList.add("versteckt");
   }
@@ -1219,27 +1435,30 @@ function renderSpiel(){
     sp.className = "wort";
     sp.textContent = wort;
     k.appendChild(sp);
+    const st = wortStatusFuer(wort, my.id);
     let sperrer = null, reserviert = null;
-    if(S.settings.lockout){
+    if(S.settings.lockout && !st.done && !st.pend){
       for(const id of S.order){
-        if(id === my.id) continue;
+        if(id === my.id || (teams && S.players[id].team === teamVon(my.id))) continue;
         if(S.players[id].done[wort]) sperrer = S.players[id];
         else if(S.players[id].pending[wort]) reserviert = S.players[id];
       }
     }
-    if(ich.done[wort]){
+    const meineFarbe = teams ? (TEAMFARBEN[teamVon(my.id)] || ich.farbe) : ich.farbe;
+    const farbeVon = sp2 => teams ? (TEAMFARBEN[sp2.team] || sp2.farbe) : sp2.farbe;
+    if(st.done){
       k.classList.add("meins");
-      k.style.background = ich.farbe;
-      k.style.borderColor = ich.farbe;
-    }else if(ich.pending[wort]){
+      k.style.background = meineFarbe;
+      k.style.borderColor = meineFarbe;
+    }else if(st.pend){
       k.classList.add("wartet");
     }else if(sperrer){
       k.classList.add("gesperrt");
-      k.style.borderColor = sperrer.farbe;
-      k.style.background = sperrer.farbe + "2E";
+      k.style.borderColor = farbeVon(sperrer);
+      k.style.background = farbeVon(sperrer) + "2E";
     }else if(reserviert){
       k.classList.add("wartet");
-      k.style.borderColor = reserviert.farbe;
+      k.style.borderColor = farbeVon(reserviert);
     }else{
       k.classList.add("offen");
       if(wort === gewaehltesWort) k.classList.add("gewaehlt");
@@ -1248,11 +1467,15 @@ function renderSpiel(){
     if(!S.settings.lockout){
       const dots = document.createElement("span");
       dots.className = "dots";
+      const gesehen = new Set();
       for(const id of S.order){
-        if(id === my.id) continue;
+        if(id === my.id || (teams && S.players[id].team === teamVon(my.id))) continue;
         if(S.players[id].done[wort]){
+          const f = farbeVon(S.players[id]);
+          if(gesehen.has(f)) continue;
+          gesehen.add(f);
           const i = document.createElement("i");
-          i.style.background = S.players[id].farbe;
+          i.style.background = f;
           dots.appendChild(i);
         }
       }
@@ -1274,11 +1497,11 @@ function renderSpiel(){
     punkt.style.background = p.farbe;
     row.appendChild(punkt);
     const nm = document.createElement("span");
-    nm.textContent = p.name + (id === S.hostId ? " 👑" : "") + (id === my.id ? " (du)" : "");
+    nm.textContent = (teams ? (p.team === "b" ? "🔵 " : "🟡 ") : "") + p.name + (id === S.hostId ? " 👑" : "") + (id === my.id ? " (du)" : "");
     row.appendChild(nm);
     const z = document.createElement("span");
     z.className = "zahl";
-    z.textContent = Object.keys(p.done).length + "/" + gesamt;
+    z.textContent = race ? (p.punkte || 0) + " Pkt" : Object.keys(p.done).length + "/" + gesamt;
     row.appendChild(z);
     sl.appendChild(row);
   }
@@ -1506,15 +1729,22 @@ setInterval(aktualisiereTimer, 500);
 
 /* ---------- Endscreen ---------- */
 function renderEnde(){
-  const gewinner = (S.winner || []).map(nameVon);
+  const race = S.settings.modus === "race";
+  const teams = S.settings.teams;
   let titel;
-  if(!gewinner.length) titel = "Unentschieden – keiner hat was gefunden 😅";
-  else if(gewinner.length === 1) titel = "🏆 " + gewinner[0] + " gewinnt!";
-  else titel = "🏆 " + gewinner.join(" & ") + " gewinnen!";
+  if(!(S.winner || []).length){
+    titel = "Unentschieden!";
+  }else if(teams){
+    titel = "🏆 " + TEAMNAMEN[teamVon(S.winner[0])] + " gewinnt!";
+  }else{
+    const gewinner = S.winner.map(nameVon);
+    titel = "🏆 " + gewinner.join(" & ") + (gewinner.length === 1 ? " gewinnt!" : " gewinnen!");
+  }
   $("endeTitel").textContent = titel;
   const gruende = {
     bingo: "BINGO! Eine komplette Reihe voll.",
-    zeit: "Zeit abgelaufen – die meisten Funde gewinnen.",
+    ziel: "Punkteziel erreicht!",
+    zeit: race ? "Zeit abgelaufen – die meisten Punkte gewinnen." : "Zeit abgelaufen – die meisten Funde gewinnen.",
     voll: "Alle Felder vergeben – die meisten Funde gewinnen.",
     abbruch: "Der Host hat die Runde beendet – aktueller Stand zählt."
   };
@@ -1522,24 +1752,43 @@ function renderEnde(){
   const liste = $("endeListe");
   liste.innerHTML = "";
   const gesamt = S.settings.groesse * S.settings.groesse;
+  if(teams){
+    const reihen = ["a", "b"].map(t => ({ t, w: teamGesamt(t) })).sort((x, y) => y.w - x.w);
+    for(const r of reihen){
+      const row = document.createElement("div");
+      row.className = "endezeile" + ((S.winner || []).length && teamVon(S.winner[0]) === r.t ? " sieger" : "");
+      const punkt = document.createElement("span");
+      punkt.className = "punkt";
+      punkt.style.background = TEAMFARBEN[r.t];
+      row.appendChild(punkt);
+      const nm = document.createElement("span");
+      nm.textContent = TEAMNAMEN[r.t];
+      row.appendChild(nm);
+      const z = document.createElement("span");
+      z.className = "zahl";
+      z.textContent = r.w + (race ? " Pkt" : " Funde");
+      row.appendChild(z);
+      liste.appendChild(row);
+    }
+  }
   const medaillen = ["🥇", "🥈", "🥉"];
   rangliste().forEach((e, i) => {
     const row = document.createElement("div");
-    row.className = "endezeile" + ((S.winner || []).includes(e.id) ? " sieger" : "");
+    row.className = "endezeile" + (!teams && (S.winner || []).includes(e.id) ? " sieger" : "");
     const platz = document.createElement("span");
     platz.className = "platz";
-    platz.textContent = medaillen[i] || (i + 1) + ".";
+    platz.textContent = teams ? "" : (medaillen[i] || (i + 1) + ".");
     row.appendChild(platz);
     const punkt = document.createElement("span");
     punkt.className = "punkt";
     punkt.style.background = e.p.farbe;
     row.appendChild(punkt);
     const nm = document.createElement("span");
-    nm.textContent = e.p.name + (e.id === my.id ? " (du)" : "");
+    nm.textContent = (teams ? (e.p.team === "b" ? "🔵 " : "🟡 ") : "") + e.p.name + (e.id === my.id ? " (du)" : "");
     row.appendChild(nm);
     const z = document.createElement("span");
     z.className = "zahl";
-    z.textContent = e.n + "/" + gesamt + " Felder";
+    z.textContent = race ? (e.p.punkte || 0) + " Pkt" : e.n + "/" + gesamt + " Felder";
     row.appendChild(z);
     liste.appendChild(row);
   });
@@ -1634,6 +1883,39 @@ function init(){
   });
   $("chkLockout").addEventListener("change", () => {
     if(isHost && S){ S.settings.lockout = $("chkLockout").checked; broadcast(); }
+  });
+  $("selModus").addEventListener("change", () => {
+    if(isHost && S){ S.settings.modus = $("selModus").value; broadcast(); }
+  });
+  $("selPunkte").addEventListener("change", () => {
+    if(isHost && S){ S.settings.punkteZiel = parseInt($("selPunkte").value, 10); broadcast(); }
+  });
+  $("chkTeams").addEventListener("change", () => {
+    if(isHost && S){
+      S.settings.teams = $("chkTeams").checked;
+      if(S.settings.teams) verteileTeams();
+      broadcast();
+    }
+  });
+  $("btnRaceFangen").addEventListener("click", () => {
+    if(!S || S.settings.modus !== "race" || !S.raceWort || S.phase !== "playing") return;
+    if(!pano || !pano.getPano()){
+      toast("Street View ist noch nicht bereit – kurz warten.");
+      return;
+    }
+    const pov = pano.getPov();
+    const pos = pano.getPosition();
+    aktion({
+      t: "capture",
+      wort: S.raceWort,
+      panoId: pano.getPano(),
+      pov: { heading: pov.heading, pitch: pov.pitch },
+      zoom: pano.getZoom(),
+      pos: pos ? { lat: pos.lat(), lng: pos.lng() } : null
+    });
+  });
+  $("btnRaceSkip").addEventListener("click", () => {
+    if(isHost) aktion({ t: "raceskip" });
   });
   $("btnStart").addEventListener("click", () => { if(isHost && S && S.phase === "lobby") startRunde(); });
 
