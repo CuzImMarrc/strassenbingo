@@ -402,6 +402,21 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
             <option value="mix">Alles gemischt</option>
           </select>
         </label>
+        <label>Region
+          <select id="selRegion">
+            <option value="welt" selected>Weltweit</option>
+            <option value="huerth">Hürth</option>
+            <option value="rheinerft">Rhein-Erft-Kreis</option>
+            <option value="de">Deutschland</option>
+            <option value="dach">DACH</option>
+            <option value="europa">Europa</option>
+            <option value="nordamerika">Nordamerika</option>
+            <option value="suedamerika">Südamerika</option>
+            <option value="asien">Asien</option>
+            <option value="ozeanien">Ozeanien</option>
+            <option value="afrika">Afrika</option>
+          </select>
+        </label>
         <label class="schalter">Teams
           <input type="checkbox" id="chkTeams"><span class="knubbel"></span>
         </label>
@@ -626,34 +641,155 @@ const WORTLISTEN = {
 };
 
 const SPAWNS = [
-  {name:"Köln", lat:50.9375, lng:6.9603},
-  {name:"Berlin", lat:52.5200, lng:13.4050},
-  {name:"Hamburg", lat:53.5511, lng:9.9937},
-  {name:"München", lat:48.1351, lng:11.5820},
-  {name:"Wien", lat:48.2082, lng:16.3738},
-  {name:"Zürich", lat:47.3769, lng:8.5417},
-  {name:"Amsterdam", lat:52.3676, lng:4.9041},
-  {name:"Paris", lat:48.8566, lng:2.3522},
-  {name:"London", lat:51.5074, lng:-0.1278},
-  {name:"Rom", lat:41.9028, lng:12.4964},
-  {name:"Barcelona", lat:41.3874, lng:2.1686},
-  {name:"Lissabon", lat:38.7223, lng:-9.1393},
-  {name:"Kopenhagen", lat:55.6761, lng:12.5683},
-  {name:"Stockholm", lat:59.3293, lng:18.0686},
-  {name:"Prag", lat:50.0755, lng:14.4378},
-  {name:"New York", lat:40.7128, lng:-74.0060},
-  {name:"San Francisco", lat:37.7749, lng:-122.4194},
-  {name:"Toronto", lat:43.6532, lng:-79.3832},
-  {name:"Mexiko-Stadt", lat:19.4326, lng:-99.1332},
-  {name:"São Paulo", lat:-23.5505, lng:-46.6333},
-  {name:"Buenos Aires", lat:-34.6037, lng:-58.3816},
-  {name:"Tokio", lat:35.6762, lng:139.6503},
-  {name:"Seoul", lat:37.5665, lng:126.9780},
-  {name:"Singapur", lat:1.3521, lng:103.8198},
-  {name:"Sydney", lat:-33.8688, lng:151.2093},
-  {name:"Kapstadt", lat:-33.9249, lng:18.4241},
-  {name:"Reykjavík", lat:64.1466, lng:-21.9426}
+  {name:"Hürth-Mitte", lat:50.8770, lng:6.8680, r:"hu"},
+  {name:"Hürth-Efferen", lat:50.9020, lng:6.8970, r:"hu"},
+  {name:"Alt-Hürth", lat:50.8690, lng:6.8550, r:"hu"},
+  {name:"Hürth-Fischenich", lat:50.8560, lng:6.9170, r:"hu"},
+  {name:"Hürth-Gleuel", lat:50.8840, lng:6.8220, r:"hu"},
+  {name:"Brühl", lat:50.8280, lng:6.9040, r:"rek"},
+  {name:"Wesseling", lat:50.8270, lng:6.9780, r:"rek"},
+  {name:"Frechen", lat:50.9110, lng:6.8120, r:"rek"},
+  {name:"Kerpen", lat:50.8700, lng:6.6960, r:"rek"},
+  {name:"Bergheim", lat:50.9550, lng:6.6400, r:"rek"},
+  {name:"Pulheim", lat:50.9990, lng:6.8050, r:"rek"},
+  {name:"Erftstadt-Lechenich", lat:50.8000, lng:6.7660, r:"rek"},
+  {name:"Bedburg", lat:51.0030, lng:6.5730, r:"rek"},
+  {name:"Elsdorf", lat:50.9370, lng:6.5670, r:"rek"},
+  {name:"Köln", lat:50.9375, lng:6.9603, r:"de"},
+  {name:"Berlin", lat:52.5200, lng:13.4050, r:"de"},
+  {name:"Hamburg", lat:53.5511, lng:9.9937, r:"de"},
+  {name:"München", lat:48.1351, lng:11.5820, r:"de"},
+  {name:"Frankfurt", lat:50.1109, lng:8.6821, r:"de"},
+  {name:"Stuttgart", lat:48.7758, lng:9.1829, r:"de"},
+  {name:"Dresden", lat:51.0504, lng:13.7373, r:"de"},
+  {name:"Leipzig", lat:51.3397, lng:12.3731, r:"de"},
+  {name:"Hannover", lat:52.3759, lng:9.7320, r:"de"},
+  {name:"Nürnberg", lat:49.4521, lng:11.0767, r:"de"},
+  {name:"Wien", lat:48.2082, lng:16.3738, r:"at"},
+  {name:"Graz", lat:47.0707, lng:15.4395, r:"at"},
+  {name:"Zürich", lat:47.3769, lng:8.5417, r:"ch"},
+  {name:"Genf", lat:46.2044, lng:6.1432, r:"ch"},
+  {name:"Amsterdam", lat:52.3676, lng:4.9041, r:"eu"},
+  {name:"Paris", lat:48.8566, lng:2.3522, r:"eu"},
+  {name:"London", lat:51.5074, lng:-0.1278, r:"eu"},
+  {name:"Rom", lat:41.9028, lng:12.4964, r:"eu"},
+  {name:"Barcelona", lat:41.3874, lng:2.1686, r:"eu"},
+  {name:"Lissabon", lat:38.7223, lng:-9.1393, r:"eu"},
+  {name:"Kopenhagen", lat:55.6761, lng:12.5683, r:"eu"},
+  {name:"Stockholm", lat:59.3293, lng:18.0686, r:"eu"},
+  {name:"Prag", lat:50.0755, lng:14.4378, r:"eu"},
+  {name:"Athen", lat:37.9838, lng:23.7275, r:"eu"},
+  {name:"Dublin", lat:53.3498, lng:-6.2603, r:"eu"},
+  {name:"Warschau", lat:52.2297, lng:21.0122, r:"eu"},
+  {name:"Budapest", lat:47.4979, lng:19.0402, r:"eu"},
+  {name:"Reykjavík", lat:64.1466, lng:-21.9426, r:"eu"},
+  {name:"New York", lat:40.7128, lng:-74.0060, r:"na"},
+  {name:"San Francisco", lat:37.7749, lng:-122.4194, r:"na"},
+  {name:"Chicago", lat:41.8781, lng:-87.6298, r:"na"},
+  {name:"Los Angeles", lat:34.0522, lng:-118.2437, r:"na"},
+  {name:"Miami", lat:25.7617, lng:-80.1918, r:"na"},
+  {name:"Toronto", lat:43.6532, lng:-79.3832, r:"na"},
+  {name:"Vancouver", lat:49.2827, lng:-123.1207, r:"na"},
+  {name:"Mexiko-Stadt", lat:19.4326, lng:-99.1332, r:"na"},
+  {name:"São Paulo", lat:-23.5505, lng:-46.6333, r:"sa"},
+  {name:"Rio de Janeiro", lat:-22.9068, lng:-43.1729, r:"sa"},
+  {name:"Buenos Aires", lat:-34.6037, lng:-58.3816, r:"sa"},
+  {name:"Santiago", lat:-33.4489, lng:-70.6693, r:"sa"},
+  {name:"Bogotá", lat:4.7110, lng:-74.0721, r:"sa"},
+  {name:"Lima", lat:-12.0464, lng:-77.0428, r:"sa"},
+  {name:"Tokio", lat:35.6762, lng:139.6503, r:"as"},
+  {name:"Osaka", lat:34.6937, lng:135.5023, r:"as"},
+  {name:"Seoul", lat:37.5665, lng:126.9780, r:"as"},
+  {name:"Taipeh", lat:25.0330, lng:121.5654, r:"as"},
+  {name:"Hongkong", lat:22.3193, lng:114.1694, r:"as"},
+  {name:"Bangkok", lat:13.7563, lng:100.5018, r:"as"},
+  {name:"Kuala Lumpur", lat:3.1390, lng:101.6869, r:"as"},
+  {name:"Singapur", lat:1.3521, lng:103.8198, r:"as"},
+  {name:"Sydney", lat:-33.8688, lng:151.2093, r:"oz"},
+  {name:"Melbourne", lat:-37.8136, lng:144.9631, r:"oz"},
+  {name:"Brisbane", lat:-27.4698, lng:153.0251, r:"oz"},
+  {name:"Perth", lat:-31.9505, lng:115.8605, r:"oz"},
+  {name:"Auckland", lat:-36.8485, lng:174.7633, r:"oz"},
+  {name:"Wellington", lat:-41.2866, lng:174.7756, r:"oz"},
+  {name:"Kapstadt", lat:-33.9249, lng:18.4241, r:"af"},
+  {name:"Johannesburg", lat:-26.2041, lng:28.0473, r:"af"},
+  {name:"Durban", lat:-29.8587, lng:31.0218, r:"af"},
+  {name:"Nairobi", lat:-1.2921, lng:36.8219, r:"af"},
+  {name:"Accra", lat:5.6037, lng:-0.1870, r:"af"},
+  {name:"Dakar", lat:14.7167, lng:-17.4677, r:"af"}
 ];
+
+const HUERTH_POLY = [
+  [50.915,6.795],[50.912,6.885],[50.905,6.905],[50.885,6.915],[50.862,6.935],
+  [50.845,6.905],[50.845,6.830],[50.870,6.780]
+];
+const REK_POLY = [
+  [51.070,6.720],[51.030,6.850],[50.930,6.860],[50.915,6.910],[50.860,7.005],
+  [50.800,6.960],[50.745,6.770],[50.790,6.600],[50.900,6.480],[50.990,6.520]
+];
+const DE_POLY = [
+  [53.95,6.60],[55.06,8.35],[54.83,9.42],[54.40,11.20],[54.17,12.10],[54.70,13.50],
+  [53.92,14.26],[52.84,14.16],[51.06,15.04],[50.20,12.33],[48.60,13.84],[47.70,13.02],
+  [47.40,11.28],[47.55,9.72],[47.56,7.58],[48.97,8.20],[49.45,6.36],[50.35,6.00],
+  [51.05,5.87],[51.83,6.07],[52.43,6.99],[53.33,7.20]
+];
+
+const REGIONEN = {
+  welt:        { name: "Weltweit", codes: null, formen: null },
+  huerth:      { name: "Hürth", codes: ["hu"], formen: [{ poly: HUERTH_POLY }], klein: true },
+  rheinerft:   { name: "Rhein-Erft-Kreis", codes: ["hu","rek"], formen: [{ poly: REK_POLY }], klein: true },
+  de:          { name: "Deutschland", codes: ["hu","rek","de"], formen: [{ poly: DE_POLY }] },
+  dach:        { name: "DACH", codes: ["hu","rek","de","at","ch"], formen: [{ poly: DE_POLY }, { box: [46.30, 9.50, 49.05, 17.20] }, { box: [45.80, 5.95, 47.90, 10.50] }] },
+  europa:      { name: "Europa", codes: ["hu","rek","de","at","ch","eu"], formen: [{ box: [34.50, -25.0, 71.50, 45.0] }] },
+  nordamerika: { name: "Nordamerika", codes: ["na"], formen: [{ box: [7.0, -170.0, 83.0, -50.0] }] },
+  suedamerika: { name: "Südamerika", codes: ["sa"], formen: [{ box: [-56.0, -82.0, 13.0, -33.0] }] },
+  asien:       { name: "Asien", codes: ["as"], formen: [{ box: [-11.0, 45.0, 55.0, 150.0] }] },
+  ozeanien:    { name: "Ozeanien", codes: ["oz"], formen: [{ box: [-48.0, 110.0, 0.0, 180.0] }] },
+  afrika:      { name: "Afrika", codes: ["af"], formen: [{ box: [-35.5, -18.0, 37.5, 52.0] }] }
+};
+
+function punktInPoly(lat, lng, poly){
+  let drin = false;
+  for(let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const yi = poly[i][0], xi = poly[i][1], yj = poly[j][0], xj = poly[j][1];
+    if(((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) drin = !drin;
+  }
+  return drin;
+}
+
+function aktiveRegion(){
+  return REGIONEN[(S && S.settings && S.settings.region) || "welt"] || REGIONEN.welt;
+}
+
+function regionName(){ return aktiveRegion().name; }
+
+function inRegion(lat, lng){
+  const r = aktiveRegion();
+  if(!r.formen) return true;
+  return r.formen.some(f => {
+    if(f.box) return lat >= f.box[0] && lng >= f.box[1] && lat <= f.box[2] && lng <= f.box[3];
+    if(f.poly) return punktInPoly(lat, lng, f.poly);
+    return false;
+  });
+}
+
+function regionSpawns(){
+  const r = aktiveRegion();
+  if(!r.codes) return SPAWNS;
+  const liste = SPAWNS.filter(s => r.codes.includes(s.r));
+  return liste.length ? liste : SPAWNS;
+}
+
+function regionBounds(){
+  const r = aktiveRegion();
+  if(!r.formen) return null;
+  let s = 90, w = 180, n = -90, o = -180;
+  for(const f of r.formen){
+    if(f.box){ s = Math.min(s, f.box[0]); w = Math.min(w, f.box[1]); n = Math.max(n, f.box[2]); o = Math.max(o, f.box[3]); }
+    if(f.poly){ for(const p of f.poly){ s = Math.min(s, p[0]); w = Math.min(w, p[1]); n = Math.max(n, p[0]); o = Math.max(o, p[1]); } }
+  }
+  return { south: s, west: w, north: n, east: o };
+}
 
 const FARBEN = ["#F7C948","#4C9EEB","#EE6C4D","#8AC926","#C77DFF","#FF9F1C","#43BCCD","#F25CA2","#B5E48C","#F4989C"];
 const TEAMFARBEN = { a: "#F7C948", b: "#4C9EEB" };
@@ -729,7 +865,7 @@ let phaseVorher = null, chatLenVorher = 0;
 let joinTimeout = null, wurdeGekickt = false;
 
 let mapsPromise = null, pano = null, svService = null;
-let teleMap = null, teleMarker = null, votePanoObj = null;
+let teleMap = null, teleMarker = null, votePanoObj = null, letzteKartenRegion = null;
 let gewaehltesWort = null, aktuellFundId = null;
 let reviewListe = [], reviewIndex = -1;
 
@@ -776,9 +912,9 @@ function initPano(){
   svService = new google.maps.StreetViewService();
 }
 
-async function findePano(lat, lng){
+async function findePano(lat, lng, radien){
   const quelle = (google.maps.StreetViewSource && google.maps.StreetViewSource.OUTDOOR) || "outdoor";
-  for(const radius of [600, 3000, 15000, 60000, 250000]){
+  for(const radius of (radien || [600, 3000, 15000, 60000, 250000])){
     try{
       const antwort = await svService.getPanorama({
         location: { lat, lng },
@@ -795,8 +931,10 @@ async function findePano(lat, lng){
 
 async function springeZu(lat, lng){
   if(!pano || !svService) return false;
-  const d = await findePano(lat, lng);
+  const d = await findePano(lat, lng, aktiveRegion().klein ? [400, 1500, 5000] : null);
   if(!d) return false;
+  const l = d.location.latLng;
+  if(l && !inRegion(l.lat(), l.lng())) return false;
   pano.setPano(d.location.pano);
   pano.setPov({ heading: 0, pitch: 0 });
   pano.setZoom(1);
@@ -844,13 +982,14 @@ function frischerZustand(code){
     phase: "lobby",
     code,
     hostId: my.id,
-    settings: { groesse: 4, minuten: 15, voting: true, lockout: false, liste: "klassisch", modus: "bingo", teams: false, punkteZiel: 10 },
+    settings: { groesse: 4, minuten: 15, voting: true, lockout: false, liste: "klassisch", modus: "bingo", teams: false, punkteZiel: 10, region: "welt" },
     players: {},
     order: [],
     board: [],
     racePool: [],
     raceBenutzt: [],
     raceWort: null,
+    raceSkipVotes: {},
     spawn: null,
     startAt: 0,
     endsAt: 0,
@@ -882,6 +1021,7 @@ function addPlayer(id, name){
         if(c.votes && altId in c.votes){ c.votes[id] = c.votes[altId]; delete c.votes[altId]; }
       }
       if(Array.isArray(S.winner)) S.winner = S.winner.map(x => (x === altId ? id : x));
+      if(S.raceSkipVotes && S.raceSkipVotes[altId]){ S.raceSkipVotes[id] = true; delete S.raceSkipVotes[altId]; }
       broadcast();
       return;
     }
@@ -918,7 +1058,9 @@ function kickeSpieler(id){
   delete S.players[id];
   S.order = S.order.filter(x => x !== id);
   if(Array.isArray(S.winner)) S.winner = S.winner.filter(x => x !== id);
+  if(S.raceSkipVotes) delete S.raceSkipVotes[id];
   pruefeAlleAbstimmungen();
+  pruefeRaceSkip();
   broadcast();
 }
 
@@ -968,8 +1110,20 @@ function zieheRaceWort(){
   return w;
 }
 
+function pruefeRaceSkip(){
+  if(S.settings.modus !== "race" || S.phase !== "playing") return;
+  if(Object.values(S.captures).some(c => c.status === "pending")) return;
+  const verbundene = S.order.filter(id => S.players[id].connected);
+  const stimmen = verbundene.filter(id => S.raceSkipVotes && S.raceSkipVotes[id]).length;
+  if(stimmen > 0 && stimmen * 2 > verbundene.length){
+    S.raceSkipVotes = {};
+    S.raceWort = zieheRaceWort();
+  }
+}
+
 function raceNachTreffer(cap){
   if(S.phase !== "playing") return;
+  S.raceSkipVotes = {};
   const p = S.players[cap.player];
   const stand = S.settings.teams ? teamGesamt(p.team) : (p.punkte || 0);
   if(stand >= S.settings.punkteZiel){
@@ -1090,6 +1244,7 @@ function startRunde(){
   pool = Array.from(new Set(pool));
   if(S.settings.teams) verteileTeams();
   S.captures = {};
+  S.raceSkipVotes = {};
   for(const id of S.order){
     const p = S.players[id];
     p.done = {}; p.pending = {}; p.lastDoneAt = 0; p.punkte = 0;
@@ -1103,7 +1258,7 @@ function startRunde(){
     S.board = mischen(pool).slice(0, n * n);
     S.racePool = []; S.raceBenutzt = []; S.raceWort = null;
   }
-  S.spawn = zufall(SPAWNS);
+  S.spawn = zufall(regionSpawns());
   S.winner = null; S.winReason = "";
   S.startAt = Date.now();
   S.endsAt = S.settings.minuten > 0 ? Date.now() + S.settings.minuten * 60000 : 0;
@@ -1121,6 +1276,7 @@ function amHost(von, m){
     case "capture": {
       const p = S.players[von];
       if(!p || S.phase !== "playing") break;
+      if(m.pos && !inRegion(m.pos.lat, m.pos.lng)) break;
       const wort = m.wort;
       if(S.settings.modus === "race"){
         if(wort !== S.raceWort) break;
@@ -1183,9 +1339,13 @@ function amHost(von, m){
     }
 
     case "raceskip": {
-      if(von !== S.hostId || S.settings.modus !== "race" || S.phase !== "playing") break;
+      const p = S.players[von];
+      if(!p || S.settings.modus !== "race" || S.phase !== "playing") break;
       if(Object.values(S.captures).some(c => c.status === "pending")) break;
-      S.raceWort = zieheRaceWort();
+      if(!S.raceSkipVotes) S.raceSkipVotes = {};
+      if(S.raceSkipVotes[von]) delete S.raceSkipVotes[von];
+      else S.raceSkipVotes[von] = true;
+      pruefeRaceSkip();
       broadcast();
       break;
     }
@@ -1273,6 +1433,7 @@ function richteHostEin(code){
       if(S && S.players[c.peer]){
         S.players[c.peer].connected = false;
         pruefeAlleAbstimmungen();
+        pruefeRaceSkip();
         broadcast();
       }
     });
@@ -1388,6 +1549,11 @@ function verarbeiteDiff(alt){
   if(S.settings.modus === "race" && S.phase === "playing" && alt.raceWort && S.raceWort && alt.raceWort !== S.raceWort){
     toast("🔎 Neues Wort: " + S.raceWort);
   }
+  const altSkips = Object.keys(alt.raceSkipVotes || {}).length;
+  const neuSkips = Object.keys(S.raceSkipVotes || {}).length;
+  if(S.settings.modus === "race" && S.phase === "playing" && neuSkips > altSkips){
+    toast("🗳️ Skip-Stimme abgegeben (" + neuSkips + ") – Mehrheit skippt das Wort");
+  }
 }
 
 /* ===================== Rendering ===================== */
@@ -1463,13 +1629,14 @@ function renderLobby(){
   $("lblGroesse").classList.toggle("versteckt", race);
   $("lblLockout").classList.toggle("versteckt", race);
   $("lblPunkte").classList.toggle("versteckt", !race);
-  ["selGroesse", "selZeit", "selListe", "selModus", "selPunkte", "chkVoting", "chkLockout", "chkTeams"].forEach(x => { $(x).disabled = !isHost; });
+  ["selGroesse", "selZeit", "selListe", "selModus", "selPunkte", "selRegion", "chkVoting", "chkLockout", "chkTeams"].forEach(x => { $(x).disabled = !isHost; });
   if(!isHost){
     $("selGroesse").value = String(S.settings.groesse);
     $("selZeit").value = String(S.settings.minuten);
     $("selListe").value = S.settings.liste || "klassisch";
     $("selModus").value = S.settings.modus || "bingo";
     $("selPunkte").value = String(S.settings.punkteZiel || 10);
+    $("selRegion").value = S.settings.region || "welt";
     $("chkVoting").checked = !!S.settings.voting;
     $("chkLockout").checked = !!S.settings.lockout;
     $("chkTeams").checked = !!S.settings.teams;
@@ -1488,10 +1655,15 @@ function renderSpiel(){
     gewaehltesWort = null;
     $("fangleiste").classList.add("versteckt");
     $("raceWort").textContent = S.raceWort || "–";
-    $("btnRaceSkip").classList.toggle("versteckt", !isHost);
     const inPruefung = Object.values(S.captures).some(c => c.status === "pending");
     $("btnRaceFangen").disabled = inPruefung;
     $("btnRaceFangen").textContent = inPruefung ? "⏳ Wird geprüft …" : "📸 Gefunden!";
+    $("btnRaceSkip").classList.remove("versteckt");
+    $("btnRaceSkip").disabled = inPruefung;
+    const verbSkip = S.order.filter(id => S.players[id].connected);
+    const skipNoetig = Math.floor(verbSkip.length / 2) + 1;
+    const skipStimmen = verbSkip.filter(id => S.raceSkipVotes && S.raceSkipVotes[id]).length;
+    $("btnRaceSkip").textContent = ((S.raceSkipVotes && S.raceSkipVotes[my.id]) ? "✔ " : "") + "Wort skippen (" + skipStimmen + "/" + skipNoetig + ")";
     const rs = $("raceStand");
     rs.innerHTML = "";
     if(teams){
@@ -1676,6 +1848,10 @@ function fangeAktuellesWort(){
   }
   const pov = pano.getPov();
   const pos = pano.getPosition();
+  if(pos && !inRegion(pos.lat(), pos.lng())){
+    toast("🚧 Du bist außerhalb des Spielgebiets (" + regionName() + ") – hier zählt nichts.");
+    return;
+  }
   aktion({
     t: "capture",
     wort: gewaehltesWort,
@@ -1706,7 +1882,7 @@ async function betreteSpiel(){
   initPano();
   const s = S && S.spawn;
   if(!s) return;
-  toast("📍 Startort: " + s.name);
+  toast("📍 Startort: " + s.name + (S.settings.region && S.settings.region !== "welt" ? " · Region: " + regionName() : ""));
   const ok = await springeZu(s.lat, s.lng);
   if(!ok) toast("Startort hat kein Street View – nutz die 🗺️ Weltkarte.");
 }
@@ -1789,26 +1965,37 @@ async function oeffneKarte(){
     teleMarker = new google.maps.Marker({ map: teleMap });
     teleMap.addListener("click", async ev => {
       const la = ev.latLng.lat(), ln = ev.latLng.lng();
+      if(!inRegion(la, ln)){
+        toast("🚧 Außerhalb des Spielgebiets – Region: " + regionName());
+        return;
+      }
       schliesseModal("mKarte");
       toast("Suche Street View in der Nähe …", null, 3000);
       const ok = await springeZu(la, ln);
-      if(!ok) toast("Da ist weit und breit kein Street View – probier eine andere Stelle.");
+      if(!ok) toast("Da ist kein Street View im Spielgebiet – probier eine andere Stelle.");
     });
   }
   const pos = pano && pano.getPosition();
   if(pos) teleMarker.setPosition(pos);
   const fixGroesse = () => {
     google.maps.event.trigger(teleMap, "resize");
-    if(pos) teleMap.setCenter(pos);
+    if(pos && inRegion(pos.lat(), pos.lng())) teleMap.setCenter(pos);
   };
   requestAnimationFrame(fixGroesse);
   setTimeout(fixGroesse, 120);
   setTimeout(fixGroesse, 400);
+  const grenzen = regionBounds();
+  teleMap.setOptions({ restriction: grenzen ? { latLngBounds: grenzen, strictBounds: false } : null });
+  const reg = (S && S.settings.region) || "welt";
+  if(letzteKartenRegion !== reg){
+    letzteKartenRegion = reg;
+    if(grenzen) setTimeout(() => teleMap.fitBounds(grenzen), 160);
+  }
 }
 
 async function zufallsOrt(){
   if(!pano){ toast("Street View lädt noch …"); return; }
-  const o = zufall(SPAWNS);
+  const o = zufall(regionSpawns());
   toast("🎲 Ab nach " + o.name + " …", null, 3500);
   const ok = await springeZu(o.lat, o.lng);
   if(!ok) toast("Hat nicht geklappt – nochmal würfeln.");
@@ -1987,6 +2174,9 @@ function init(){
   $("selModus").addEventListener("change", () => {
     if(isHost && S){ S.settings.modus = $("selModus").value; broadcast(); }
   });
+  $("selRegion").addEventListener("change", () => {
+    if(isHost && S){ S.settings.region = $("selRegion").value; broadcast(); }
+  });
   $("selPunkte").addEventListener("change", () => {
     if(isHost && S){ S.settings.punkteZiel = parseInt($("selPunkte").value, 10); broadcast(); }
   });
@@ -2005,6 +2195,10 @@ function init(){
     }
     const pov = pano.getPov();
     const pos = pano.getPosition();
+    if(pos && !inRegion(pos.lat(), pos.lng())){
+      toast("🚧 Du bist außerhalb des Spielgebiets (" + regionName() + ") – hier zählt nichts.");
+      return;
+    }
     aktion({
       t: "capture",
       wort: S.raceWort,
@@ -2015,7 +2209,7 @@ function init(){
     });
   });
   $("btnRaceSkip").addEventListener("click", () => {
-    if(isHost) aktion({ t: "raceskip" });
+    if(S && S.settings.modus === "race" && S.phase === "playing") aktion({ t: "raceskip" });
   });
   $("btnStart").addEventListener("click", () => { if(isHost && S && S.phase === "lobby") startRunde(); });
 
