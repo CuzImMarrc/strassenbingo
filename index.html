@@ -214,6 +214,8 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
 .teamgruppe h4{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
 .chip.klickbar{cursor:pointer}
 .chip.klickbar:hover{border-color:var(--gelb)}
+.kickbtn{color:var(--text-dim);font-weight:700;padding:0 3px;line-height:1;font-size:.9rem;flex-shrink:0}
+.kickbtn:hover{color:var(--rot)}
 
 /* ---------- Spieler / Feed / Chat ---------- */
 .spielerliste{display:flex;flex-direction:column;gap:6px}
@@ -393,7 +395,11 @@ details code{background:var(--asphalt);padding:1px 5px;border-radius:4px;font-si
           <select id="selListe">
             <option value="klassisch" selected>Klassisch</option>
             <option value="brainrot">Brainrot</option>
-            <option value="mix">Gemischt</option>
+            <option value="natur">Natur</option>
+            <option value="fahrzeuge">Fahrzeuge</option>
+            <option value="stadt">Stadt</option>
+            <option value="schwer">Schwer</option>
+            <option value="mix">Alles gemischt</option>
           </select>
         </label>
         <label class="schalter">Teams
@@ -557,22 +563,65 @@ const WORTLISTEN = {
   "Motorrad","Fahrrad","Roller","Anhänger","Taxi","Bus","Mülltonne","Einkaufswagen",
   "Sitzbank","Laterne","Zaun","Gewächshaus","Weinberg","Windmühle","Burg","Rathaus",
   "Museum","Kino","Marktplatz","Parkhaus","Ladesäule","Fachwerkhaus","Kreuzung",
-  "Fußgängerzone","Wohnwagen","Sporthalle"
+  "Fußgängerzone","Wohnwagen","Sporthalle","Moschee","Kapelle","Aussichtsturm",
+  "Seilbahn","Fähre","Segelboot","Wasserfall","Steg","Pier","Riesenrad","Karussell",
+  "Zelt","Campingplatz","Hochsitz","Vogelscheuche","Heuballen","Silo","Storchennest",
+  "Villa","Plattenbau","Carport","Balkon","Markise","Bahnübergang","Schranke",
+  "Raststätte","Unterführung","Parkautomat","Fahrradständer","Krankenhaus","Schule",
+  "Bibliothek"
   ],
   brainrot: [
-  "1 HP Opa","67","Anime Girl","NPC","Main Character","Handy-Zombie","Speedrunner",
-  "Rentner-Gang","Kampfradler","Rizzler","Slay Outfit","Jorts","Socken in Sandalen",
-  "Vokuhila","Crocs","Gymbro","Hund mit Aura","Katze mit Rizz","Kampftaube",
-  "Sigma-Karre","Bratan-Benz","Boomer-Karre","Rostlaube","Goofy Auto","FBI-Van",
-  "L-Parkjob","Blitzer","Blaulicht-Party","Umgekippter E-Scooter","Skibidi-Klo",
-  "Minecraft-Haus","Backrooms-Eingang","Liminal Space","Lost Place","Ohio-Ecke",
-  "Cursed Haus","Haus mit 1 HP","Baum mit 1 HP","Gigachad-Statue","Ehrenmann-Denkmal",
-  "Brainrot-Graffiti","Amogus","Scheich-Villa","Dubai-Turm","Endboss-Turm",
-  "Messie-Balkon","Monstera im Fenster","Gartenzwerg","Deko-Flamingo","Mähroboter",
-  "5G-Turm","W Döner","Vape-Shop","Shisha-Bar","Barbershop","Drip-Laden",
-  "Gacha-Automat","Energy-Dose","Sperrmüll-Loot","Flex-Pool","Bierkasten",
-  "Insta-Spot","Parkour-Spot","Hüpfburg","Tuk-Tuk","Verpixeltes Gesicht",
-  "Schatten vom Google-Auto","Kamera-Winker"
+  "1 HP Opa","Hausnummer 67","Anime Girl","NPC","Handy-Zombie","Jogging-Speedrunner",
+  "Rentner-Gang","Kampfradler","Socken in Sandalen","Vokuhila","Crocs","Gymbro",
+  "Hund mit Aura","Katze mit Rizz","Kampftaube","Sigma-Karre","Bratan-Benz",
+  "Boomer-Karre","Rostlaube","Goofy Auto","FBI-Van","L-Parkjob","Blitzer",
+  "Blaulicht-Party","Umgekippter E-Scooter","Skibidi-Dixiklo","Minecraft-Haus",
+  "Backrooms-Parkhaus","Lost Place","Ohio-Ecke","Cursed Haus","Haus mit 1 HP",
+  "Baum mit 1 HP","Gigachad-Statue","Ehrenmann-Denkmal","Brainrot-Graffiti",
+  "Amogus-Graffiti","Scheich-Villa","Dubai-Turm","Endboss-Turm","Messie-Balkon",
+  "Monstera im Fenster","Gartenzwerg","Deko-Flamingo","Mähroboter","5G-Turm",
+  "W-Dönerladen","Vape-Shop","Shisha-Bar","Barbershop","Drip-Sneaker-Laden",
+  "Gacha-Kaugummiautomat","Energy-Dose","Sperrmüll-Loot","Flex-Pool","Bierkasten",
+  "Insta-Spot","Parkour-Spot","Hüpfburg","Tuk-Tuk","NPC-Warteschlange",
+  "Side-Quest-Umleitung","Softlock-Sackgasse","Skill-Issue-Schlagloch",
+  "Gratis-Loot-Pylone","Loot-Container","Ehren-Büdchen","Boomer-Bank",
+  "Zeugenschutz-Nummernschild","Verpixeltes Gesicht","Schatten vom Google-Auto",
+  "Kamera-Winker"
+  ],
+  natur: [
+  "See","Fluss","Bach","Teich","Wasserfall","Strand","Küste","Klippe","Berge",
+  "Berggipfel","Hügel","Tal","Wald","Lichtung","Wiese","Feld","Maisfeld",
+  "Sonnenblumenfeld","Weinberg","Palme","Kaktus","Blühender Baum","Umgestürzter Baum",
+  "Baumstumpf","Felsen","Höhle","Düne","Schnee","Vulkan","Insel","Schilf","Kuh",
+  "Pferd","Schaf","Ziege","Esel","Hühner","Ente","Schwan","Möwe","Storch",
+  "Vogelschwarm","Bienenstock","Regenbogen","Sonnenuntergang","Nebel"
+  ],
+  fahrzeuge: [
+  "Rotes Auto","Gelbes Auto","Blaues Auto","Grünes Auto","Weißer Van","Cabrio",
+  "Oldtimer","Sportwagen","SUV","Pickup","Limousine","Kleinwagen","LKW","Sattelzug",
+  "Tanklaster","Kipplaster","Betonmischer","Abschleppwagen","Müllauto","Traktor",
+  "Mähdrescher","Bagger","Kranwagen","Gabelstapler","Bus","Doppeldeckerbus",
+  "Schulbus","Reisebus","Straßenbahn","Zug","Güterzug","Motorrad","Roller","Fahrrad",
+  "Lastenrad","E-Scooter","Anhänger","Wohnmobil","Wohnwagen","Taxi","Polizeiauto",
+  "Krankenwagen","Feuerwehrauto","Quad","Boot","Fähre","Kanu","Flugzeug",
+  "Hubschrauber","Heißluftballon"
+  ],
+  stadt: [
+  "Hochhaus","Wolkenkratzer","Kirche","Rathaus","Museum","Theater","Kino","Bahnhof",
+  "U-Bahn-Eingang","Bushaltestelle","Taxistand","Hotel","Restaurant","Café","Bar",
+  "Bäckerei","Metzgerei","Apotheke","Optiker","Blumenladen","Buchladen","Juwelier",
+  "Bankfiliale","Geldautomat","Wochenmarkt","Marktstand","Einkaufszentrum",
+  "Litfaßsäule","Werbetafel","Leuchtreklame","Straßenmusiker","Brunnen","Statue",
+  "Fußgängerzone","Zebrastreifen","Ampel","Laterne","Parkhaus","Tiefgarage",
+  "Spielplatz","Stadtpark","Friedhof","Baustelle","Baugerüst","Baukran","Graffiti",
+  "Wandgemälde","Dachterrasse"
+  ],
+  schwer: [
+  "Leuchtturm","Windmühle","Wasserturm","Schloss","Burg","Ruine","Aussichtsturm",
+  "Seilbahn","Skilift","Riesenrad","Achterbahn","Stadion","Flughafen",
+  "Hubschrauberlandeplatz","Sternwarte","Staudamm","Vulkan","Gletscher",
+  "Heißluftballon","Doppeldeckerbus","Rote Telefonzelle","Sonnenuhr","Storchennest",
+  "Torii","Pagode","Minarett","Obelisk","Pyramide","Totempfahl","Pferdekutsche"
   ]
 };
 
@@ -677,7 +726,7 @@ let S = null;                          // geteilter Spielzustand (Host = Quelle)
 let Salt = null;                       // letzter Snapshot (für Diffs beim Host)
 let clockOffset = 0;
 let phaseVorher = null, chatLenVorher = 0;
-let joinTimeout = null;
+let joinTimeout = null, wurdeGekickt = false;
 
 let mapsPromise = null, pano = null, svService = null;
 let teleMap = null, teleMarker = null, votePanoObj = null;
@@ -852,6 +901,27 @@ function addPlayer(id, name){
   broadcast();
 }
 
+function kickeSpieler(id){
+  if(!isHost || !S || id === my.id || !S.players[id]) return;
+  if(!confirm(S.players[id].name + " wirklich kicken?")) return;
+  const c = conns.get(id);
+  if(c){
+    try{ c.send({ t: "gekickt" }); }catch(e){}
+    conns.delete(id);
+    setTimeout(() => { try{ c.close(); }catch(e){} }, 300);
+  }
+  for(const cid of Object.keys(S.captures)){
+    const cap = S.captures[cid];
+    if(cap.player === id) delete S.captures[cid];
+    else if(cap.votes && id in cap.votes) delete cap.votes[id];
+  }
+  delete S.players[id];
+  S.order = S.order.filter(x => x !== id);
+  if(Array.isArray(S.winner)) S.winner = S.winner.filter(x => x !== id);
+  pruefeAlleAbstimmungen();
+  broadcast();
+}
+
 function andereVerbundene(ausser){
   return S.order.filter(id => id !== ausser && S.players[id].connected);
 }
@@ -1016,7 +1086,8 @@ function beendeRunde(grund){
 function startRunde(){
   const n = S.settings.groesse;
   let pool = WORTLISTEN[S.settings.liste] || WORTLISTEN.klassisch;
-  if(S.settings.liste === "mix") pool = WORTLISTEN.klassisch.concat(WORTLISTEN.brainrot);
+  if(S.settings.liste === "mix") pool = Object.values(WORTLISTEN).flat();
+  pool = Array.from(new Set(pool));
   if(S.settings.teams) verteileTeams();
   S.captures = {};
   for(const id of S.order){
@@ -1245,6 +1316,7 @@ async function raumBeitreten(){
   });
   hostConn.on("data", m => vomHost(m));
   hostConn.on("close", () => {
+    if(wurdeGekickt) return;
     if(S && S.phase === "ended") return;
     $("verlorenText").textContent = "Die Verbindung zum Host ist abgerissen.";
     $("ovVerloren").classList.remove("versteckt");
@@ -1260,7 +1332,16 @@ async function raumBeitreten(){
 }
 
 function vomHost(m){
-  if(!m || m.t !== "state") return;
+  if(!m) return;
+  if(m.t === "gekickt"){
+    wurdeGekickt = true;
+    $("verlorenTitel").textContent = "Rausgeflogen 🥾";
+    $("verlorenText").textContent = "Der Host hat dich aus dem Raum gekickt.";
+    $("ovVerloren").classList.remove("versteckt");
+    try{ peer.destroy(); }catch(e){}
+    return;
+  }
+  if(m.t !== "state") return;
   if(joinTimeout){ clearTimeout(joinTimeout); joinTimeout = null; }
   clockOffset = (m.now || Date.now()) - Date.now();
   const alt = S;
@@ -1344,6 +1425,14 @@ function renderLobby(){
     if(teams && id === my.id){
       chip.title = "Team wechseln";
       chip.addEventListener("click", () => aktion({ t: "team" }));
+    }
+    if(isHost && id !== my.id){
+      const kb = document.createElement("button");
+      kb.className = "kickbtn";
+      kb.title = "Spieler kicken";
+      kb.textContent = "✕";
+      kb.addEventListener("click", ev => { ev.stopPropagation(); kickeSpieler(id); });
+      chip.appendChild(kb);
     }
     return chip;
   };
@@ -1503,6 +1592,14 @@ function renderSpiel(){
     z.className = "zahl";
     z.textContent = race ? (p.punkte || 0) + " Pkt" : Object.keys(p.done).length + "/" + gesamt;
     row.appendChild(z);
+    if(isHost && id !== my.id){
+      const kb = document.createElement("button");
+      kb.className = "kickbtn";
+      kb.title = "Spieler kicken";
+      kb.textContent = "✕";
+      kb.addEventListener("click", () => kickeSpieler(id));
+      row.appendChild(kb);
+    }
     sl.appendChild(row);
   }
 
@@ -1698,12 +1795,15 @@ async function oeffneKarte(){
       if(!ok) toast("Da ist weit und breit kein Street View – probier eine andere Stelle.");
     });
   }
-  google.maps.event.trigger(teleMap, "resize");
   const pos = pano && pano.getPosition();
-  if(pos){
-    teleMarker.setPosition(pos);
-    teleMap.setCenter(pos);
-  }
+  if(pos) teleMarker.setPosition(pos);
+  const fixGroesse = () => {
+    google.maps.event.trigger(teleMap, "resize");
+    if(pos) teleMap.setCenter(pos);
+  };
+  requestAnimationFrame(fixGroesse);
+  setTimeout(fixGroesse, 120);
+  setTimeout(fixGroesse, 400);
 }
 
 async function zufallsOrt(){
